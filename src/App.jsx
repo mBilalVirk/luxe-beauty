@@ -13,12 +13,7 @@ import Footer from "./components/layout/Footer";
 import BackToTop from "./components/layout/BackToTop";
 import MobileBookBar from "./components/layout/MobileBookBar";
 import BookingModal from "./components/modals/BookingModal";
-
-const submitBooking = async (values) => {
-  return new Promise((resolve) => {
-    window.setTimeout(() => resolve(values), 150);
-  });
-};
+import { createBooking } from "./services/bookingApi";
 
 function App() {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -42,7 +37,7 @@ function App() {
   };
 
   const handleSubmitBooking = async (values) => {
-    await submitBooking(values);
+    await createBooking(values);
     setToast("Booking request received.");
   };
 

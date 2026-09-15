@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, X } from "lucide-react";
+import {
+  defaultBookingTimes,
+  getAvailableTimes,
+} from "../../services/bookingApi";
 
 const initialForm = {
   fullName: "",
@@ -41,6 +45,10 @@ export default function BookingModal({ isOpen, onClose, onSubmit }) {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [availableTimes, setAvailableTimes] = useState([]);
+  const [isLoadingTimes, setIsLoadingTimes] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const firstInputRef = useRef(null);
 
   useEffect(() => {
@@ -62,13 +70,46 @@ export default function BookingModal({ isOpen, onClose, onSubmit }) {
     }
   }, [isOpen, isSubmitted]);
 
+  useEffect(() => {
+    if (!form.date) {
+      setAvailableTimes([]);
+      setIsLoadingTimes(false);
+      return undefined;
+    }
+
+    let isCurrent = true;
+    getAvailableTimes(form.date)
+      .then((times) => {
+        if (isCurrent) setAvailableTimes(times);
+      })
+      .catch((error) => {
+        if (isCurrent) {
+          setAvailableTimes(defaultBookingTimes);
+          setErrors((current) => ({ ...current, time: error.message }));
+        }
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoadingTimes(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [form.date]);
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
     setErrors((current) => ({ ...current, [name]: "" }));
+    setSubmitError("");
+    if (name === "date") {
+      setAvailableTimes([]);
+      setIsLoadingTimes(Boolean(value));
+      setForm((current) => ({ ...current, time: "", date: value }));
+    }
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const nextErrors = validateBooking(form);
     setErrors(nextErrors);
@@ -80,14 +121,24 @@ export default function BookingModal({ isOpen, onClose, onSubmit }) {
       return;
     }
 
-    onSubmit?.(form);
-    setIsSubmitted(true);
+    setIsSubmitting(true);
+    setSubmitError("");
+    try {
+      await onSubmit?.(form);
+      setIsSubmitted(true);
+    } catch (error) {
+      setSubmitError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
     setIsSubmitted(false);
     setForm(initialForm);
     setErrors({});
+    setAvailableTimes([]);
+    setSubmitError("");
     onClose();
   };
 
@@ -253,13 +304,16 @@ export default function BookingModal({ isOpen, onClose, onSubmit }) {
                     onChange={handleChange}
                     className="w-full rounded-md border border-line bg-cream px-3 py-2.5 text-sm text-ink outline-none transition focus:border-roseDark"
                   >
-                    <option value="">Select a time</option>
-                    <option value="09:00 AM">09:00 AM</option>
-                    <option value="10:30 AM">10:30 AM</option>
-                    <option value="12:00 PM">12:00 PM</option>
-                    <option value="2:00 PM">2:00 PM</option>
-                    <option value="4:00 PM">4:00 PM</option>
-                    <option value="6:00 PM">6:00 PM</option>
+                    <option value="">
+                      {isLoadingTimes
+                        ? "Loading available times..."
+                        : "Select a time"}
+                    </option>
+                    {availableTimes.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
                   </select>
                   {errors.time && (
                     <div className="mt-1 text-xs text-[#b23b3b]">
@@ -271,10 +325,16 @@ export default function BookingModal({ isOpen, onClose, onSubmit }) {
 
               <button
                 type="submit"
+                disabled={isSubmitting || isLoadingTimes}
                 className="mt-2 inline-flex w-full items-center justify-center rounded-md bg-roseDark px-4 py-3 text-base font-medium text-white transition hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-roseDark focus-visible:ring-offset-2"
               >
-                Confirm Booking
+                {isSubmitting ? "Saving booking..." : "Confirm Booking"}
               </button>
+              {submitError && (
+                <p className="text-center text-xs text-[#b23b3b]">
+                  {submitError}
+                </p>
+              )}
             </form>
           </>
         ) : (

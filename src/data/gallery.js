@@ -6,7 +6,7 @@ export const gallery = [
   },
   {
     id: 2,
-    src: "https://images.unsplash.com/photo-1521590832167-7e3a5d74f1b2?auto=format&fit=crop&w=900&q=80",
+    src: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     alt: "Beauty salon makeup application",
   },
   {
